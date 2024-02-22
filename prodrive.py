@@ -2,7 +2,6 @@ from datetime import time
 import pygame
 import obd
 import time
-import subprocess
 import threading
 
 # DISPLAY SIZE
@@ -13,20 +12,21 @@ SCREEN_HEIGHT = 480
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 
+
 class CustomGauge:
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption("Custom Gauge")
+        pygame.display.set_caption('Custom Gauge')
         self.clock = pygame.time.Clock()
 
         # STATIC CUSTOM GAUGE BACKGROUND
-        self.background_image = pygame.image.load("images/GAUGE_BG.png").convert_alpha()
+        self.background_image = pygame.image.load('IMAGES/GAUGE_BG.png').convert_alpha()
 
         # BRING ALL CUSTOM RPM IMAGE LAYERS INTO A CALLABLE LIST
         self.rectangle_images = []
         for i in range(1, 26):
-            filename = f"images/RECTANGLE_{i}.png"
+            filename = f'IMAGES/RECTANGLE_{i}.png'
             image = pygame.image.load(filename).convert_alpha()
             self.rectangle_images.append(image)
 
@@ -34,7 +34,7 @@ class CustomGauge:
         self.font = pygame.font.Font(None, 68)
 
         # Initialize the OBD connection
-        self.connection = obd.OBD(38400)  # Automatically scans for available ports
+        self.connection = obd.OBD()  # Automatically scans for available ports
 
         # Initialize variables for OBD data
         self.current_rpm = 0
@@ -117,28 +117,29 @@ class CustomGauge:
 
             # RENDER RPM VALUE
             rpm_text = self.font.render(f"{int(self.current_rpm)}", True, WHITE)
-            self.screen.blit(rpm_text, (620, 90))   # RPM TEXT LOCATION
+            self.screen.blit(rpm_text, (620, 90))  # RPM TEXT LOCATION
 
             # RENDER SPEED VALUE
             speed_text = self.font.render(f"{int(self.current_speed)}", True, WHITE)
-            self.screen.blit(speed_text, (300, 330))   # SPEED TEXT LOCATION
+            self.screen.blit(speed_text, (300, 330))  # SPEED TEXT LOCATION
 
             # RENDER OIL PRESSURE VALUE
             oil_pressure_text = self.font.render(f"{int(self.current_oil_pressure)}", True, WHITE)
-            self.screen.blit(oil_pressure_text, (670, 250))   # OIL PRESSURE TEXT LOCATION
+            self.screen.blit(oil_pressure_text, (670, 250))  # OIL PRESSURE TEXT LOCATION
 
             # RENDER OIL TEMPERATURE VALUE
             oil_temperature_text = self.font.render(f"{int(self.current_oil_temperature)}", True, WHITE)
-            self.screen.blit(oil_temperature_text, (40, 257))   # OIL TEMPERATURE TEXT LOCATION
+            self.screen.blit(oil_temperature_text, (40, 257))  # OIL TEMPERATURE TEXT LOCATION
 
             # RENDER COOLANT TEMPERATURE VALUE
             coolant_temperature_text = self.font.render(f"{int(self.current_coolant_temperature)}", True, WHITE)
-            self.screen.blit(coolant_temperature_text, (40, 350))   # COOLANT TEMPERATURE TEXT LOCATION
+            self.screen.blit(coolant_temperature_text, (40, 350))  # COOLANT TEMPERATURE TEXT LOCATION
 
             pygame.display.flip()
             self.clock.tick(60)
 
         pygame.quit()
+
 
 if __name__ == "__main__":
     app = CustomGauge()
