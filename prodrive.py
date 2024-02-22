@@ -77,14 +77,14 @@ class CustomGauge:
             response = self.connection.query(obd.commands.OIL_TEMP)
             if response.value is not None:
                 self.current_oil_temperature = response.value.magnitude
-            time.sleep(10)  # Update oil temperature every 5 seconds
+            time.sleep(10)  # Update oil temperature every 10 seconds
 
     def update_coolant_temperature_data(self):
         while True:
             response = self.connection.query(obd.commands.COOLANT_TEMP)
             if response.value is not None:
                 self.current_coolant_temperature = response.value.magnitude
-            time.sleep(5)  # Update coolant temperature every 5 seconds
+            time.sleep(10)  # Update coolant temperature every 10 seconds
 
     def change_baud_rate(self):
         if self.connection.is_connected():
