@@ -39,7 +39,6 @@ class CustomGauge:
         # Initialize variables for OBD data
         self.current_rpm = 0
         self.current_speed = 0
-        self.current_oil_pressure = 0
         self.current_oil_temperature = 0
         self.current_coolant_temperature = 0
 
@@ -50,14 +49,14 @@ class CustomGauge:
         self.speed_thread = threading.Thread(target=self.update_speed_data, daemon=True)
         self.speed_thread.start()
 
-        self.oil_pressure_thread = threading.Thread(target=self.update_oil_pressure_data, daemon=True)
-        self.oil_pressure_thread.start()
-
         self.oil_temperature_thread = threading.Thread(target=self.update_oil_temperature_data, daemon=True)
         self.oil_temperature_thread.start()
 
         self.coolant_temperature_thread = threading.Thread(target=self.update_coolant_temperature_data, daemon=True)
         self.coolant_temperature_thread.start()
+
+        # Change the baud rate after initial connection
+        threading.Timer(2, self.change_baud_rate).start()
 
     def update_rpm_data(self):
         while True:
@@ -73,16 +72,9 @@ class CustomGauge:
                 self.current_speed = response.value.magnitude
             time.sleep(.01)  # Update speed every second
 
-    def update_oil_pressure_data(self):
-        while True:
-            response = self.connection.query(obd.commands.OIL_PRESSURE)
-            if response.value is not None:
-                self.current_oil_pressure = response.value.magnitude
-            time.sleep(5)  # Update oil pressure every second
-
     def update_oil_temperature_data(self):
         while True:
-            response = self.connection.query(obd.commands.COOLANT_TEMP)
+            response = self.connection.query(obd.commands.OIL_TEMP)
             if response.value is not None:
                 self.current_oil_temperature = response.value.magnitude
             time.sleep(10)  # Update oil temperature every 5 seconds
@@ -93,6 +85,18 @@ class CustomGauge:
             if response.value is not None:
                 self.current_coolant_temperature = response.value.magnitude
             time.sleep(5)  # Update coolant temperature every 5 seconds
+
+    def change_baud_rate(self):
+        if self.connection.is_connected():
+            self.connection.close()
+            time.sleep(1)  # Wait for the connection to close
+            self.connection = obd.OBD(baudrate=115200)  # Change baud rate to 115200
+            # Restart threads for data update
+            self.rpm_thread = threading.Thread(target=self.update_rpm_data, daemon=True)
+            self.rpm_thread.start()
+
+            self.speed_thread = threading.Thread(target=self.update_speed_data, daemon=True)
+            self.speed_thread.start()
 
     def run(self):
         running = True
@@ -122,10 +126,6 @@ class CustomGauge:
             # RENDER SPEED VALUE
             speed_text = self.font.render(f"{int(self.current_speed)}", True, WHITE)
             self.screen.blit(speed_text, (300, 330))  # SPEED TEXT LOCATION
-
-            # RENDER OIL PRESSURE VALUE
-            oil_pressure_text = self.font.render(f"{int(self.current_oil_pressure)}", True, WHITE)
-            self.screen.blit(oil_pressure_text, (670, 250))  # OIL PRESSURE TEXT LOCATION
 
             # RENDER OIL TEMPERATURE VALUE
             oil_temperature_text = self.font.render(f"{int(self.current_oil_temperature)}", True, WHITE)
