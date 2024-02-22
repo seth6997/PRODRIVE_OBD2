@@ -3,6 +3,7 @@ import pygame
 import obd
 import time
 import subprocess
+import random
 
 # DISPLAY SIZE
 SCREEN_WIDTH = 800
@@ -29,26 +30,23 @@ class CustomGauge:
             image = pygame.image.load(filename).convert_alpha()
             self.rectangle_images.append(image)
 
-        # INIT VALUE
+        # INIT VALUES
         self.current_rpm = 0
         self.current_speed = 0
+        self.current_oil_pressure = 0
+        self.current_oil_temperature = 0
+        self.current_coolant_temperature = 0
 
         # FONT SETTINGS
         self.font = pygame.font.Font(None, 68)
 
-        # Initialize the OBD connection
-        self.connection = obd.OBD()  # Automatically scans for available ports
-
     def update_obd_data(self):
-        # Retrieve RPM and speed data from the OBD adapter
-        cmd_rpm = obd.commands.RPM
-        cmd_speed = obd.commands.SPEED
-        response_rpm = self.connection.query(cmd_rpm)
-        response_speed = self.connection.query(cmd_speed)
-
-        if not response_rpm.is_null() and not response_speed.is_null():
-            self.current_rpm = response_rpm.value.magnitude
-            self.current_speed = response_speed.value.magnitude
+        # Simulate RPM, speed, oil pressure, oil temperature, and coolant temperature data
+        self.current_rpm = random.randint(1000, 6000)
+        self.current_speed = random.randint(0, 200)
+        self.current_oil_pressure = random.randint(10, 100)
+        self.current_oil_temperature = random.randint(60, 120)
+        self.current_coolant_temperature = random.randint(70, 110)
 
     def run(self):
         running = True
@@ -57,7 +55,7 @@ class CustomGauge:
                 if event.type == pygame.QUIT:
                     running = False
 
-            # Update OBD data
+            # Update simulated OBD data
             self.update_obd_data()
 
             # BG COLOR
@@ -81,6 +79,18 @@ class CustomGauge:
             # RENDER SPEED VALUE
             speed_text = self.font.render(f"{int(self.current_speed)}", True, WHITE)
             self.screen.blit(speed_text, (300, 330))   # SPEED TEXT LOCATION
+
+            # RENDER OIL PRESSURE VALUE
+            oil_pressure_text = self.font.render(f"{int(self.current_oil_pressure)}", True, WHITE)
+            self.screen.blit(oil_pressure_text, (670, 250))   # OIL PRESSURE TEXT LOCATION
+
+            # RENDER OIL TEMPERATURE VALUE
+            oil_temperature_text = self.font.render(f"{int(self.current_oil_temperature)}", True, WHITE)
+            self.screen.blit(oil_temperature_text, (40, 257))   # OIL TEMPERATURE TEXT LOCATION
+
+            # RENDER COOLANT TEMPERATURE VALUE
+            coolant_temperature_text = self.font.render(f"{int(self.current_coolant_temperature)}", True, WHITE)
+            self.screen.blit(coolant_temperature_text, (40, 350))   # COOLANT TEMPERATURE TEXT LOCATION
 
             pygame.display.flip()
             self.clock.tick(30)
