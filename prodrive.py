@@ -2,7 +2,6 @@ from datetime import time
 import pygame
 import obd
 import time
-import threading
 
 # DISPLAY SIZE
 SCREEN_WIDTH = 800
@@ -33,8 +32,8 @@ class CustomGauge:
         # FONT SETTINGS
         self.font = pygame.font.Font(None, 68)
 
-        # Initialize the OBD connection
-        self.connection = obd.OBD()  # Automatically scans for available ports
+        # Initialize the OBD connection asynchronously
+        self.connection = obd.Async()  
 
         # Initialize variables for OBD data
         self.current_rpm = 0
@@ -43,56 +42,30 @@ class CustomGauge:
         self.current_oil_temperature = 0
         self.current_coolant_temperature = 0
 
-        # Create threads for updating specific OBD data
-        self.rpm_thread = threading.Thread(target=self.update_rpm_data, daemon=True)
-        self.rpm_thread.start()
+        # Set up event handler for new OBD data
+        self.connection.watch(obd.commands.RPM, callback=self.update_rpm)
+        self.connection.watch(obd.commands.SPEED, callback=self.update_speed)
+        self.connection.watch(obd.commands.OIL_PRESSURE, callback=self.update_oil_pressure)
+        self.connection.watch(obd.commands.COOLANT_TEMP, callback=self.update_oil_temperature)
+        self.connection.watch(obd.commands.COOLANT_TEMP, callback=self.update_coolant_temperature)
 
-        self.speed_thread = threading.Thread(target=self.update_speed_data, daemon=True)
-        self.speed_thread.start()
+        # Start monitoring
+        self.connection.start()
 
-        self.oil_pressure_thread = threading.Thread(target=self.update_oil_pressure_data, daemon=True)
-        self.oil_pressure_thread.start()
+    def update_rpm(self, r):
+        self.current_rpm = r.value.magnitude
 
-        self.oil_temperature_thread = threading.Thread(target=self.update_oil_temperature_data, daemon=True)
-        self.oil_temperature_thread.start()
+    def update_speed(self, s):
+        self.current_speed = s.value.magnitude
 
-        self.coolant_temperature_thread = threading.Thread(target=self.update_coolant_temperature_data, daemon=True)
-        self.coolant_temperature_thread.start()
+    def update_oil_pressure(self, op):
+        self.current_oil_pressure = op.value.magnitude
 
-    def update_rpm_data(self):
-        while True:
-            response = self.connection.query(obd.commands.RPM)
-            if response.value is not None:
-                self.current_rpm = response.value.magnitude
-            time.sleep(.01)  # Update RPM every second
+    def update_oil_temperature(self, ot):
+        self.current_oil_temperature = ot.value.magnitude
 
-    def update_speed_data(self):
-        while True:
-            response = self.connection.query(obd.commands.SPEED)
-            if response.value is not None:
-                self.current_speed = response.value.magnitude
-            time.sleep(.01)  # Update speed every second
-
-    def update_oil_pressure_data(self):
-        while True:
-            response = self.connection.query(obd.commands.OIL_PRESSURE)
-            if response.value is not None:
-                self.current_oil_pressure = response.value.magnitude
-            time.sleep(5)  # Update oil pressure every second
-
-    def update_oil_temperature_data(self):
-        while True:
-            response = self.connection.query(obd.commands.COOLANT_TEMP)
-            if response.value is not None:
-                self.current_oil_temperature = response.value.magnitude
-            time.sleep(10)  # Update oil temperature every 5 seconds
-
-    def update_coolant_temperature_data(self):
-        while True:
-            response = self.connection.query(obd.commands.COOLANT_TEMP)
-            if response.value is not None:
-                self.current_coolant_temperature = response.value.magnitude
-            time.sleep(5)  # Update coolant temperature every 5 seconds
+    def update_coolant_temperature(self, ct):
+        self.current_coolant_temperature = ct.value.magnitude
 
     def run(self):
         running = True
