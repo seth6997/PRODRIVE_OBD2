@@ -2,7 +2,6 @@ from datetime import time
 import pygame
 import obd
 import time
-import threading
 
 # DISPLAY SIZE
 SCREEN_WIDTH = 800
@@ -42,63 +41,33 @@ class CustomGauge:
         self.current_oil_temperature = 0
         self.current_coolant_temperature = 0
 
-        # Create threads for updating specific OBD data
-        self.rpm_thread = threading.Thread(target=self.update_rpm_data, daemon=True)
-        self.rpm_thread.start()
-
-        self.speed_thread = threading.Thread(target=self.update_speed_data, daemon=True)
-        self.speed_thread.start()
-
-        self.oil_temperature_thread = threading.Thread(target=self.update_oil_temperature_data, daemon=True)
-        self.oil_temperature_thread.start()
-
-        self.coolant_temperature_thread = threading.Thread(target=self.update_coolant_temperature_data, daemon=True)
-        self.coolant_temperature_thread.start()
-
-        # Change the baud rate after initial connection
-        threading.Timer(2, self.change_baud_rate).start()
-
-    def update_rpm_data(self):
+    def update_obd_data(self):
         while True:
+            # Update RPM
             response = self.connection.query(obd.commands.RPM)
             if response.value is not None:
                 self.current_rpm = response.value.magnitude
-            time.sleep(.01)  # Update RPM every second
 
-    def update_speed_data(self):
-        while True:
-            response = self.connection.query(obd.commands.SPEED)
-            if response.value is not None:
-                self.current_speed = response.value.magnitude
-            time.sleep(.01)  # Update speed every second
+            # Update Speed
+            # response = self.connection.query(obd.commands.SPEED)
+            # if response.value is not None:
+                # self.current_speed = response.value.magnitude
 
-    def update_oil_temperature_data(self):
-        while True:
-            response = self.connection.query(obd.commands.OIL_TEMP)
-            if response.value is not None:
-                self.current_oil_temperature = response.value.magnitude
-            time.sleep(10)  # Update oil temperature every 10 seconds
+            # Update Oil Temperature
+            # response = self.connection.query(obd.commands.OIL_TEMP)
+            # if response.value is not None:
+                # self.current_oil_temperature = response.value.magnitude
 
-    def update_coolant_temperature_data(self):
-        while True:
-            response = self.connection.query(obd.commands.COOLANT_TEMP)
-            if response.value is not None:
-                self.current_coolant_temperature = response.value.magnitude
-            time.sleep(10)  # Update coolant temperature every 10 seconds
+            # Update Coolant Temperature
+            # response = self.connection.query(obd.commands.COOLANT_TEMP)
+            # if response.value is not None:
+                # self.current_coolant_temperature = response.value.magnitude
 
-    def change_baud_rate(self):
-        if self.connection.is_connected():
-            self.connection.close()
-            time.sleep(1)  # Wait for the connection to close
-            self.connection = obd.OBD(baudrate=115200)  # Change baud rate to 115200
-            # Restart threads for data update
-            self.rpm_thread = threading.Thread(target=self.update_rpm_data, daemon=True)
-            self.rpm_thread.start()
-
-            self.speed_thread = threading.Thread(target=self.update_speed_data, daemon=True)
-            self.speed_thread.start()
+            time.sleep(0.01)  # Adjust the sleep interval as needed
 
     def run(self):
+        self.update_obd_data()  # Update OBD data in the main thread
+
         running = True
         while running:
             for event in pygame.event.get():
@@ -124,16 +93,16 @@ class CustomGauge:
             self.screen.blit(rpm_text, (620, 90))  # RPM TEXT LOCATION
 
             # RENDER SPEED VALUE
-            speed_text = self.font.render(f"{int(self.current_speed)}", True, WHITE)
-            self.screen.blit(speed_text, (300, 330))  # SPEED TEXT LOCATION
+            # speed_text = self.font.render(f"{int(self.current_speed)}", True, WHITE)
+            # self.screen.blit(speed_text, (300, 330))  # SPEED TEXT LOCATION
 
             # RENDER OIL TEMPERATURE VALUE
-            oil_temperature_text = self.font.render(f"{int(self.current_oil_temperature)}", True, WHITE)
-            self.screen.blit(oil_temperature_text, (40, 257))  # OIL TEMPERATURE TEXT LOCATION
+            # oil_temperature_text = self.font.render(f"{int(self.current_oil_temperature)}", True, WHITE)
+            # self.screen.blit(oil_temperature_text, (40, 257))  # OIL TEMPERATURE TEXT LOCATION
 
             # RENDER COOLANT TEMPERATURE VALUE
-            coolant_temperature_text = self.font.render(f"{int(self.current_coolant_temperature)}", True, WHITE)
-            self.screen.blit(coolant_temperature_text, (40, 350))  # COOLANT TEMPERATURE TEXT LOCATION
+            # coolant_temperature_text = self.font.render(f"{int(self.current_coolant_temperature)}", True, WHITE)
+            # self.screen.blit(coolant_temperature_text, (40, 350))  # COOLANT TEMPERATURE TEXT LOCATION
 
             pygame.display.flip()
             self.clock.tick(60)
