@@ -3,7 +3,6 @@ import pygame
 import obd
 import time
 import subprocess
-import random
 
 # DISPLAY SIZE
 SCREEN_WIDTH = 800
@@ -30,23 +29,32 @@ class CustomGauge:
             image = pygame.image.load(filename).convert_alpha()
             self.rectangle_images.append(image)
 
-        # INIT VALUES
-        self.current_rpm = 0
-        self.current_speed = 0
-        self.current_oil_pressure = 0
-        self.current_oil_temperature = 0
-        self.current_coolant_temperature = 0
-
         # FONT SETTINGS
         self.font = pygame.font.Font(None, 68)
 
+        # Initialize the OBD connection
+        self.connection = obd.OBD()  # Automatically scans for available ports
+
     def update_obd_data(self):
-        # Simulate RPM, speed, oil pressure, oil temperature, and coolant temperature data
-        self.current_rpm = random.randint(1000, 6000)
-        self.current_speed = random.randint(0, 200)
-        self.current_oil_pressure = random.randint(10, 100)
-        self.current_oil_temperature = random.randint(60, 120)
-        self.current_coolant_temperature = random.randint(70, 110)
+        # Retrieve RPM, speed, oil pressure, oil temperature, and coolant temperature data from the OBD adapter
+        cmd_rpm = obd.commands.RPM
+        cmd_speed = obd.commands.SPEED
+        cmd_oil_pressure = obd.commands.OIL_PRESSURE
+        cmd_oil_temp = obd.commands.COOLANT_TEMP
+        cmd_coolant_temp = obd.commands.COOLANT_TEMP
+        response_rpm = self.connection.query(cmd_rpm)
+        response_speed = self.connection.query(cmd_speed)
+        response_oil_pressure = self.connection.query(cmd_oil_pressure)
+        response_oil_temp = self.connection.query(cmd_oil_temp)
+        response_coolant_temp = self.connection.query(cmd_coolant_temp)
+
+        if not (response_rpm.is_null() or response_speed.is_null() or response_oil_pressure.is_null() or
+                response_oil_temp.is_null() or response_coolant_temp.is_null()):
+            self.current_rpm = response_rpm.value.magnitude
+            self.current_speed = response_speed.value.magnitude
+            self.current_oil_pressure = response_oil_pressure.value.magnitude
+            self.current_oil_temperature = response_oil_temp.value.magnitude
+            self.current_coolant_temperature = response_coolant_temp.value.magnitude
 
     def run(self):
         running = True
@@ -55,7 +63,7 @@ class CustomGauge:
                 if event.type == pygame.QUIT:
                     running = False
 
-            # Update simulated OBD data
+            # Update OBD data
             self.update_obd_data()
 
             # BG COLOR
