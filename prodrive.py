@@ -1,7 +1,19 @@
 from datetime import time
 import pygame
 import obd
+import RPi.GPIO as GPIO
 import time
+import subprocess
+
+# Initialize the OBD connection
+try:
+    connection = obd.OBD(baudrate=38400)
+except Exception as e:
+    print("Error initializing OBD connection:", e)
+    exit()
+
+# GPIO pin for shutdown signal
+SHUTDOWN_PIN = 3
 
 # DISPLAY SIZE
 SCREEN_WIDTH = 800
@@ -10,69 +22,75 @@ SCREEN_HEIGHT = 480
 # COLORS USED
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+
+
+def shutdown_pi():
+    print("Shutting down...")
+    pygame.quit()
+    GPIO.cleanup()
+    time.sleep(1)
+    subprocess.run(["sudo", "shutdown", "-h", "now"])
 
 
 class CustomGauge:
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-        pygame.display.set_caption('Custom Gauge')
+        pygame.display.set_caption("Custom Gauge")
         self.clock = pygame.time.Clock()
 
         # STATIC CUSTOM GAUGE BACKGROUND
-        self.background_image = pygame.image.load('IMAGES/GAUGE_BG.png').convert_alpha()
+        self.background_image = pygame.image.load("IMAGES/GAUGE_BG.png").convert_alpha()
 
         # BRING ALL CUSTOM RPM IMAGE LAYERS INTO A CALLABLE LIST
         self.rectangle_images = []
-        for i in range(1, 26):
-            filename = f'IMAGES/RECTANGLE_{i}.png'
+        for i in range(1, 31):
+            filename = f"IMAGES/RECTANGLE_{i}.png"
             image = pygame.image.load(filename).convert_alpha()
             self.rectangle_images.append(image)
+
+        # INIT VALUE
+        self.current_rpm = 0
+        self.current_speed = 0
+
+        # INDEXING THE LAST RENDERED RECTANGLE FROM THE CUSTOM IMAGES FOLDER
+        self.last_displayed_index = -1
 
         # FONT SETTINGS
         self.font = pygame.font.Font(None, 68)
 
-        # Initialize the OBD connection
-        self.connection = obd.OBD()  # Automatically scans for available ports
+        # GEAR INIT TO 1ST GEAR
+        self.current_gear = 1
 
-        # Initialize variables for OBD data
-        self.current_rpm = 0
-        self.current_speed = 0
-        self.current_oil_temperature = 0
-        self.current_coolant_temperature = 0
+        # Variable to track time when speed is 160
+        self.timer_start = None
+
+        # Setup GPIO for shutdown signal
+        GPIO.setmode(GPIO.BCM)
+        GPIO.setup(SHUTDOWN_PIN, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+        GPIO.add_event_detect(SHUTDOWN_PIN, GPIO.FALLING, callback=shutdown_pi, bouncetime=200)
 
     def update_obd_data(self):
-        while True:
-            # Update RPM
-            response = self.connection.query(obd.commands.RPM)
-            if response.value is not None:
-                self.current_rpm = response.value.magnitude
+        # Retrieve RPM and speed data from the OBD adapter
+        cmd_rpm = obd.commands.RPM
+        cmd_speed = obd.commands.SPEED
+        response_rpm = connection.query(cmd_rpm)
+        response_speed = connection.query(cmd_speed)
 
-            # Update Speed
-            # response = self.connection.query(obd.commands.SPEED)
-            # if response.value is not None:
-                # self.current_speed = response.value.magnitude
-
-            # Update Oil Temperature
-            # response = self.connection.query(obd.commands.OIL_TEMP)
-            # if response.value is not None:
-                # self.current_oil_temperature = response.value.magnitude
-
-            # Update Coolant Temperature
-            # response = self.connection.query(obd.commands.COOLANT_TEMP)
-            # if response.value is not None:
-                # self.current_coolant_temperature = response.value.magnitude
-
-            time.sleep(0.01)  # Adjust the sleep interval as needed
+        if not response_rpm.is_null() and not response_speed.is_null():
+            self.current_rpm = response_rpm.value.magnitude
+            self.current_speed = response_speed.value.magnitude
 
     def run(self):
-        self.update_obd_data()  # Update OBD data in the main thread
-
         running = True
         while running:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
+
+            # Update OBD data
+            self.update_obd_data()
 
             # BG COLOR
             self.screen.fill(BLACK)
@@ -81,7 +99,7 @@ class CustomGauge:
             self.screen.blit(self.background_image, (0, 0))
 
             # RENDER EACH CUSTOM RECTANGLE LAYER for RPM
-            num_rectangles_rpm = min(self.current_rpm // 348 + 1, len(self.rectangle_images))
+            num_rectangles_rpm = min(self.current_rpm // 266 + 1, len(self.rectangle_images))
             for i in range(len(self.rectangle_images)):
                 if i < num_rectangles_rpm:
                     self.screen.blit(self.rectangle_images[i], (0, 0))
@@ -90,22 +108,14 @@ class CustomGauge:
 
             # RENDER RPM VALUE
             rpm_text = self.font.render(f"{int(self.current_rpm)}", True, WHITE)
-            self.screen.blit(rpm_text, (620, 90))  # RPM TEXT LOCATION
+            self.screen.blit(rpm_text, (222, 196))  # RPM TEXT LOCATION
 
             # RENDER SPEED VALUE
-            # speed_text = self.font.render(f"{int(self.current_speed)}", True, WHITE)
-            # self.screen.blit(speed_text, (300, 330))  # SPEED TEXT LOCATION
-
-            # RENDER OIL TEMPERATURE VALUE
-            # oil_temperature_text = self.font.render(f"{int(self.current_oil_temperature)}", True, WHITE)
-            # self.screen.blit(oil_temperature_text, (40, 257))  # OIL TEMPERATURE TEXT LOCATION
-
-            # RENDER COOLANT TEMPERATURE VALUE
-            # coolant_temperature_text = self.font.render(f"{int(self.current_coolant_temperature)}", True, WHITE)
-            # self.screen.blit(coolant_temperature_text, (40, 350))  # COOLANT TEMPERATURE TEXT LOCATION
+            speed_text = self.font.render(f"{int(self.current_speed)}", True, WHITE)
+            self.screen.blit(speed_text, (208, 326))  # SPEED TEXT LOCATION
 
             pygame.display.flip()
-            self.clock.tick(60)
+            self.clock.tick(30)
 
         pygame.quit()
 
